@@ -1,0 +1,12 @@
+name: bc-msw-1990-2023
+title: bc-msw-1990-2023
+username: bcgov-env
+account: bcgov-env
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16229484
+bundleId: 11293145
+url: https://bcgov-env.shinyapps.io/bc-msw-1990-2023/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
