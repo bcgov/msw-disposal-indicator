@@ -1,4 +1,4 @@
-# Copyright 2024 Province of British Columbia
+# Copyright 2025 Province of British Columbia
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,22 +20,22 @@ library(stringi)
 source("R/helpers.R")
 
 # Get current data from BC Data Catalogue:
-# web link: "https://catalogue.data.gov.bc.ca/dataset/d21ed158-0ac7-4afd-a03b-ce22df0096bc/resource/d2648733-e484-40f2-b589-48192c16686b/download/bcmunicipalsolidwastedisposal.csv"
+# web link: "https://catalogue.data.gov.bc.ca/dataset/d21ed158-0ac7-4afd-a03b-ce22df0096bc/resource/d2648733-e484-40f2-b589-48192c16686b/download/bc_municipal_solid_waste_disposal.csv"
 
 old_msw <- bcdc_get_data("d21ed158-0ac7-4afd-a03b-ce22df0096bc")
 
 # Add new data -----------------------------------------------------------
 ## Data obtained from program area and put in 'data/' folder
 
-data_2022 <- read_csv("data/2022-MSW-Disposal.csv") %>%
-  mutate(Year = 2022,
+data_2023 <- read_csv("data/2023-MSW-Disposal.csv") %>%
+  mutate(Year = 2023,
          Member = recode(Member, "Comox Valley Regional District (Strathcona)" = "Comox-Strathcona"),
          Member = gsub("^Regional District( of)? | Regional (District|Municipality)$", "", Member)) %>%
   rename("Regional_District" = Member) %>%
   filter(Regional_District != "TOTAL BC") %>%
   arrange(stri_trans_totitle(Regional_District))
 
-data_2022 <- data_2022 %>%
+data_2023 <- data_2023 %>%
   rowwise() %>%
   mutate(diff = list(data.frame(dist = stringdist(Regional_District,unique(old_msw$Regional_District)), 
                                 rd = unique(old_msw$Regional_District)))) %>%
@@ -44,10 +44,10 @@ data_2022 <- data_2022 %>%
   mutate("Regional_District" = unlist(new_name,use.names = F)) %>%
   select(Regional_District,
          Year, 
-         "Population" = `2022 Population`, 
-         "Total_Disposed_Tonnes" = `2022 Total Disposal (Tonnes)`)
+         "Population" = `2023 Population`, 
+         "Total_Disposed_Tonnes" = `2023 Total Disposal (Tonnes)`)
 
-msw <- bind_rows(old_msw, data_2022)
+msw <- bind_rows(old_msw, data_2023)
 
 ## Combine Comox and Strathcona -----------------------------------------------
 
@@ -61,7 +61,6 @@ msw <- msw %>%
   ## Remove Stikine
   filter(Regional_District != "Stikine")
 
-
 # ----------------------------------------------------------------------------
 ## Calculate provincial totals and calculate per-capita disposal in kg, and fill in years
 
@@ -71,6 +70,10 @@ msw <- msw %>%
   summarise(Regional_District = "British Columbia",
             Population = sum(Population, na.rm = TRUE),
             Total_Disposed_Tonnes = sum(Total_Disposed_Tonnes, na.rm = TRUE)) %>%
+  mutate(Total_Disposed_Tonnes = case_when (
+    Year == 2023 ~ (Total_Disposed_Tonnes + 50000), # Adjust 2023 data by 50k. Note: there is a 50K tonnes of unclaimed waste (FV claimed it’s from MV) that has been added to the total but it’s not reflected in any RD’s tonnage.
+    TRUE ~ Total_Disposed_Tonnes
+  )) %>%
   bind_rows(msw, .) %>%
   ungroup() %>%
   mutate(Year = as.integer(Year),

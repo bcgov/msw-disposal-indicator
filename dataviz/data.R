@@ -10,11 +10,11 @@ library(rmapshaper)
 
 # Read data 2 options here -----------------------------------------------------------------------------------------
 ### indicator data obtained from BC Data Catalogue 
-indicator <- bcdc_get_data("d21ed158-0ac7-4afd-a03b-ce22df0096bc") |> 
-   mutate(Year = as.numeric(Year))
+#indicator <- bcdc_get_data("d21ed158-0ac7-4afd-a03b-ce22df0096bc") |> 
+#   mutate(Year = as.numeric(Year))
 
 ### OR if stored locally, bring in updated data this way
-#indicator <- read_csv('out/BC_Municipal_Solid_Waste_Disposal.csv') 
+indicator <- read_csv('out/BC_Municipal_Solid_Waste_Disposal.csv') 
 
 message("changed indicator Disposal_Rate_kg with value 0 to NA")
 indicator$Disposal_Rate_kg[which(indicator$Disposal_Rate_kg == 0)] <- NA_integer_
@@ -112,6 +112,10 @@ indicator_summary <- indicator %>%
   summarise(Regional_District = "British Columbia",
             Population = sum(Population, na.rm = TRUE),
             Total_Disposed_Tonnes = sum(Total_Disposed_Tonnes, na.rm = TRUE)) %>%
+  mutate(Total_Disposed_Tonnes = case_when (
+    Year == 2023 ~ (Total_Disposed_Tonnes + 50000), # Adjust 2023 data by 50k. Note: there is a 50K tonnes of unclaimed waste (FV claimed it’s from MV) that has been added to the total but it’s not reflected in any RD’s tonnage.
+    TRUE ~ Total_Disposed_Tonnes
+  )) %>%
   ungroup() %>%
   mutate(Disposal_Rate_kg = Total_Disposed_Tonnes/Population * 1000,
          Year = factor(Year, levels = levels(indicator$Year)))

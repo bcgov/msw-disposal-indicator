@@ -77,8 +77,8 @@ gg_bar_year <- function(data, color){
                          col = "black",
                          linewidth = 0.5) +
     scale_x_discrete(drop = FALSE, 
-                     breaks = c(seq(1990, max_year-6, 5), 2022),
-                     labels = c(seq(1990, max_year-6, 5), 2022),
+                     breaks = c(seq(1990, 2018, by = 4), 2023),
+                     labels = c(seq(1990, 2018, by = 4), 2023),
                      expand = expansion(0.04)) +
     scale_y_continuous(expand = c(0,0), 
                        breaks = c(0, 250, 500, 750, 1000),
