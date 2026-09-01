@@ -113,7 +113,7 @@ indicator_summary <- indicator %>%
             Population = sum(Population, na.rm = TRUE),
             Total_Disposed_Tonnes = sum(Total_Disposed_Tonnes, na.rm = TRUE)) %>%
   mutate(Total_Disposed_Tonnes = case_when (
-    Year == 2023 ~ (Total_Disposed_Tonnes + 50000), # Adjust 2023 data by 50k. Note: there is a 50K tonnes of unclaimed waste (FV claimed it’s from MV) that has been added to the total but it’s not reflected in any RD’s tonnage.
+    Year == 2024 ~ (Total_Disposed_Tonnes), 
     TRUE ~ Total_Disposed_Tonnes
   )) %>%
   ungroup() %>%

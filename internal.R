@@ -1,4 +1,4 @@
-# Copyright 2025 Province of British Columbia
+# Copyright 2026 Province of British Columbia
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,18 +24,77 @@ source("R/helpers.R")
 
 old_msw <- bcdc_get_data("d21ed158-0ac7-4afd-a03b-ce22df0096bc")
 
+# Latest corrections/updates
+msw_updates <- read_csv("data/2026-previous years data update.csv")
+
+key_cols <- c("Regional_District", "Year")
+
+update_cols <- setdiff(names(msw_updates), key_cols)
+
+old_msw_updated <- old_msw %>%
+  left_join(
+    msw_updates,
+    by = key_cols,
+    suffix = c("", "_new")
+  )
+
+for(col in update_cols)
+{
+  old_msw_updated[[col]] <- dplyr::coalesce(
+    old_msw_updated[[paste0(col, "_new")]],
+    old_msw_updated[[col]]
+  )
+}
+
+old_msw_updated <- old_msw_updated %>%
+  select(-ends_with("_new"))
+
+# Optional verification
+msw_updates
+
+old_msw_updated %>% 
+  filter(Regional_District == "North Okanagan") %>%
+  filter(Year %in% c(2017, 2018, 2019, 2020)) %>%
+  print(n = Inf)
+
+old_msw_updated %>% 
+  filter(Regional_District == "Northern Rockies") %>%
+  filter(Year %in% 2023) %>%
+  print(n = Inf)
+
+# Rows that are NOT supposed to be updated
+old_not_updated <- old_msw %>%
+  anti_join(msw_updates, by = key_cols) %>%
+  arrange(across(all_of(key_cols))) %>%
+  select(all_of(c(key_cols, update_cols)))
+
+new_not_updated <- old_msw_updated %>%
+  anti_join(msw_updates, by = key_cols) %>%
+  arrange(across(all_of(key_cols))) %>%
+  select(all_of(c(key_cols, update_cols)))
+
+  all.equal(
+    old_not_updated,
+    new_not_updated,
+    check.attributes = FALSE
+  )
+
+old_msw <- old_msw_updated
+
 # Add new data -----------------------------------------------------------
 ## Data obtained from program area and put in 'data/' folder
 
-data_2023 <- read_csv("data/2023-MSW-Disposal.csv") %>%
-  mutate(Year = 2023,
+data_2024 <- read_csv("data/2024-MSW-Disposal.csv") %>%
+  mutate(Year = 2024,
+         `2024 Per Capita Disposal (kg/capita)` = if_else(Member == "Central Coast Regional District", 0, `2024 Per Capita Disposal (kg/capita)`), # Remove 2024 Central Coast RD value: no verifiable estimate available
+         `2024 Total Disposal (Tonnes)` = if_else(Member == "Central Coast Regional District", 0, `2024 Total Disposal (Tonnes)`),
          Member = recode(Member, "Comox Valley Regional District (Strathcona)" = "Comox-Strathcona"),
          Member = gsub("^Regional District( of)? | Regional (District|Municipality)$", "", Member)) %>%
   rename("Regional_District" = Member) %>%
   filter(Regional_District != "TOTAL BC") %>%
   arrange(stri_trans_totitle(Regional_District))
 
-data_2023 <- data_2023 %>%
+data_2024 <- data_2024 %>%
   rowwise() %>%
   mutate(diff = list(data.frame(dist = stringdist(Regional_District,unique(old_msw$Regional_District)), 
                                 rd = unique(old_msw$Regional_District)))) %>%
@@ -44,10 +103,10 @@ data_2023 <- data_2023 %>%
   mutate("Regional_District" = unlist(new_name,use.names = F)) %>%
   select(Regional_District,
          Year, 
-         "Population" = `2023 Population`, 
-         "Total_Disposed_Tonnes" = `2023 Total Disposal (Tonnes)`)
+         "Population" = `2024 Population`, 
+         "Total_Disposed_Tonnes" = `2024 Total Disposal (Tonnes)`)
 
-msw <- bind_rows(old_msw, data_2023)
+msw <- bind_rows(old_msw, data_2024)
 
 ## Combine Comox and Strathcona -----------------------------------------------
 
@@ -71,7 +130,7 @@ msw <- msw %>%
             Population = sum(Population, na.rm = TRUE),
             Total_Disposed_Tonnes = sum(Total_Disposed_Tonnes, na.rm = TRUE)) %>%
   mutate(Total_Disposed_Tonnes = case_when (
-    Year == 2023 ~ (Total_Disposed_Tonnes + 50000), # Adjust 2023 data by 50k. Note: there is a 50K tonnes of unclaimed waste (FV claimed it’s from MV) that has been added to the total but it’s not reflected in any RD’s tonnage.
+    Year == 2024 ~ (Total_Disposed_Tonnes), 
     TRUE ~ Total_Disposed_Tonnes
   )) %>%
   bind_rows(msw, .) %>%
